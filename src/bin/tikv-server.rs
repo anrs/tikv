@@ -64,7 +64,7 @@ fn get_string_value<F>(short: &str,
     matches.opt_str(short)
         .or_else(|| {
             config.lookup(long).and_then(|v| f(v)).or_else(|| {
-                info!("malformed or missing {}, use default", long);
+                info!("malformed or missing {}, use default {:?}", long, default);
                 default
             })
         })
@@ -86,19 +86,19 @@ fn initial_metric(matches: &Matches, config: &toml::Value) {
                                  "metric.level",
                                  &matches,
                                  &config,
-                                 Some("info".to_owned()),
+                                 Some("off".to_owned()),
                                  |v| v.as_str().map(|s| s.to_owned()));
     let addr = get_string_value("metric-addr",
                                 "metric.addr",
                                 &matches,
                                 &config,
-                                Some("".to_owned()),
+                                Some("127.0.0.1:0".to_owned()),
                                 |v| v.as_str().map(|s| s.to_owned()));
     let host = get_string_value("metric-host",
                                 "metric.host",
                                 &matches,
                                 &config,
-                                Some("".to_owned()),
+                                Some("127.0.0.1:8125".to_owned()),
                                 |v| v.as_str().map(|s| s.to_owned()));
     let prefix = get_string_value("metric-prefix",
                                   "metric.prefix",
@@ -115,6 +115,7 @@ fn initial_metric(matches: &Matches, config: &toml::Value) {
             if let Err(r) = metric::set_metric_client(Box::new(client)) {
                 error!("{}", r);
             }
+            info!("start udp metric client");
         }
     } else {
         let sink = LoggingMetricSink::new(logger::get_level_by_string(&level)
@@ -122,6 +123,7 @@ fn initial_metric(matches: &Matches, config: &toml::Value) {
             .unwrap());
         let client = StatsdClient::from_sink(&prefix, sink);
 
+        info!("start log metric client");
         if let Err(r) = metric::set_metric_client(Box::new(client)) {
             error!("{}", r);
         }
